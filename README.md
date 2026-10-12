@@ -29,7 +29,7 @@ RandSystem1 是一个开源、模型无关的 AI 决策评估框架，而不是�
 
 **重要：** mock-uniform 返回均匀概率，并将 isSimulation 设为 true。它不是 Jev/Laya 等真实模型的预测，不能作为“模型优于随机”的证据。第一版不提供真实资金交易能力。
 
-阅读：[系统架构](docs/ARCHITECTURE.md) · [统计方法](docs/STATISTICAL_METHODS.md) · [模型协议](docs/MODEL_PROTOCOL.md) · [API](docs/API.md) · [迭代计划](docs/DEVELOPMENT_PLAN.md)。
+完整原始需求：[项目开发任务书](docs/PROJECT_REQUIREMENTS.md)。阅读：[系统架构](docs/ARCHITECTURE.md) · [统计方法](docs/STATISTICAL_METHODS.md) · [模型协议](docs/MODEL_PROTOCOL.md) · [API](docs/API.md) · [迭代计划](docs/DEVELOPMENT_PLAN.md)。
 
 ## English
 

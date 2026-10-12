@@ -1,6 +1,6 @@
 # Development plan / 开发进度
 
-Source of product requirements: user-provided RandSystem1 project taskbook (2026-10-12). Scope: model-independent random baseline and evaluation framework targeting .NET 10. Iterations are sequential; do not claim later features until tested.
+Source of product requirements: [complete original RandSystem1 taskbook](PROJECT_REQUIREMENTS.md) (2026-10-12). Scope: model-independent random baseline and evaluation framework targeting .NET 10. Iterations are sequential; do not claim later features until tested.
 
 | Iteration | Objective | Status |
 |---|---|---|
