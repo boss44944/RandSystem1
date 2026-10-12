@@ -1,0 +1,49 @@
+{
+  "openapi": "3.0.3",
+  "info": {"title": "RandSystem1 Foundation API", "version": "0.1.0", "description": "Iteration 001 endpoints only. Mock predictions are simulated."},
+  "paths": {
+    "/api/health": {"get": {"responses": {"200": {"description": "Service health"}}}},
+    "/api/models": {"get": {"responses": {"200": {"description": "Available models"}}}},
+    "/api/models/predict": {
+      "post": {
+        "parameters": [{"name": "modelId", "in": "query", "required": false, "schema": {"type": "string", "default": "mock-uniform"}}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/DecisionRequest"}}}},
+        "responses": {
+          "200": {"description": "Simulated prediction", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/DecisionPrediction"}}}},
+          "400": {"description": "Invalid request"},
+          "404": {"description": "Model not found"},
+          "502": {"description": "Model output failed validation"}
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "DecisionRequest": {
+        "type": "object",
+        "required": ["requestId", "taskType", "options"],
+        "properties": {
+          "requestId": {"type": "string"},
+          "taskType": {"type": "string"},
+          "options": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+          "context": {"type": "object", "additionalProperties": true}
+        }
+      },
+      "DecisionPrediction": {
+        "type": "object",
+        "required": ["requestId", "taskType", "modelId", "modelVersion", "probabilities", "predictedOption", "latencyMs", "predictedAt", "isSimulation"],
+        "properties": {
+          "requestId": {"type": "string"},
+          "taskType": {"type": "string"},
+          "modelId": {"type": "string"},
+          "modelVersion": {"type": "string"},
+          "probabilities": {"type": "object", "additionalProperties": {"type": "number", "minimum": 0, "maximum": 1}},
+          "predictedOption": {"type": "string"},
+          "latencyMs": {"type": "number", "minimum": 0},
+          "predictedAt": {"type": "string", "format": "date-time"},
+          "isSimulation": {"type": "boolean"}
+        }
+      }
+    }
+  }
+}
