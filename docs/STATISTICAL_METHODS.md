@@ -1,6 +1,6 @@
 # Statistical Methods / 统计方法
 
-**Status:** methodological contract and future implementation plan; Iteration 001 does not claim these analyses are executable.
+**Status:** Iteration 003 implementation: supervised classification metrics, ECE, Monte Carlo sampled-accuracy null and selected inference are executable; other analyses below remain future work.
 
 ## Baselines
 
@@ -25,3 +25,30 @@ Output entropy, Jensen-Shannon divergence, perturbation stability, order sensiti
 ## Time-series safeguards
 
 Use chronological walk-forward splits, purge overlapping forecast horizons, embargo where necessary, and include transaction fees, slippage, exposure and survivorship bias in trading demonstrations. No optimization may use future information; historical returns do not guarantee future returns.
+
+## Implemented in Iteration 003
+
+- Classification: support per label; confusion truth rows / prediction columns; macro
+  recall (balanced accuracy) averages supported labels and does not give an
+  artificial zero recall for a test-absent label. Macro precision/F1 likewise
+  average labels observed in ground truth.
+- Brier: multiclass sum of squared per-class errors, averaged by observation
+  (not divided by class count). Log Loss: mean negative log true class
+  probability with 1e-15 lower clamp. Null skill when baseline loss is zero.
+- Calibration: reported-choice-confidence ECE with fixed-width bins and
+  reliability counts/confidence/correctness. This is a descriptive diagnostic;
+  ECE near zero on a small sample does not prove calibration.
+- Monte Carlo: seeded baselines solve the same fixed held-out examples repeatedly.
+  Report mean, SD, null percentiles, selection extreme, approximate Monte Carlo
+  mean error interval and an add-one tail estimate if observed choices supplied.
+- IID paired model differences: aligned observations, bootstrap uncertainty
+  interval, within-pair label swaps (exact for at most 15 pairs, seeded
+  approximation beyond), Bonferroni correction supplied comparison count.
+  Permutation label-swap validity requires exchangeability under the null.
+- Time series: only if caller explicitly confirms chronological order and
+  block length >= 2, a circular moving-block bootstrap is used to retain
+  short-range dependence. No IID permutation p-value is shown.
+- Binomial one-sided upper tail: only available with explicit confirmation
+  of IID Bernoulli sampling and a known common null success probability.
+- Implementation is a pure .NET 10 Core library; the API has explicit bounded
+  CPU/data request limits and does not handle production-size async jobs yet.

@@ -1,6 +1,6 @@
 # API / 接口
 
-Endpoints implemented through Iteration 002:
+Endpoints implemented through Iteration 003:
 
 | Method | Path | Behavior |
 |---|---|---|
@@ -8,10 +8,14 @@ Endpoints implemented through Iteration 002:
 | GET | /api/models | Lists available model adapters and simulation flag |
 | POST | /api/models/predict?modelId=mock-uniform | Accepts DecisionRequest JSON and returns DecisionPrediction |
 | POST | /api/random/generate | Generate reproducible Uniform, Dirichlet, training-fitted Majority/Prior baselines and independent ensemble members |
+| POST | /api/evaluation/run | Evaluate labeled test observations (classification, probability, calibration and skill) |
+| POST | /api/evaluation/monte-carlo | Generate fixed-seed random accuracy null distribution and conditional upper-tail estimate |
+| POST | /api/evaluation/paired | Paired model-versus-baseline loss comparison, bootstrap and guarded significance |
+| POST | /api/evaluation/binomial | Exact binomial upper-tail under explicitly confirmed IID Bernoulli assumptions |
 
 Invalid request returns HTTP 400; an unknown model returns 404. A faulty model output is rejected with HTTP 502. An OpenAPI JSON endpoint is exposed at /openapi/v1.json in development mode.
 
-The following routes are **planned, not implemented**: /api/evaluation/run, /api/evaluation/monte-carlo, /api/evaluation/complementarity, /api/fusion/predict, /api/backtest/run, /api/backtest/{id}. Long-running jobs, database persistence and CLI are later iterations.
+The following routes are **planned, not implemented**: /api/evaluation/complementarity, /api/fusion/predict, /api/backtest/run, /api/backtest/{id}. Long-running jobs, database persistence and CLI are later iterations.
 
 ## Iteration 002: random baseline simulation
 
@@ -43,6 +47,101 @@ Results reproduce for identical seed, input and engine version. PRNG is
 SplitMix64, not cryptographically secure. Random baseline probabilities do
 not represent calibrated AI confidence or empirical prediction accuracy.
 The caller, not this endpoint, must enforce chronological training/test
-splits; the endpoint never accepts ground-truth test labels. Monte Carlo
-assessment, hypothesis testing, and comparisons are deferred to Iteration 003.
+splits; the endpoint never accepts ground-truth test labels. Monte Carlo assessment, hypothesis testing, and comparisons are available via the Iteration 003 evaluation endpoints.
 Do not select only the best random member as an honest baseline.
+
+## Iteration 003: evaluation, simulation, and valid statistical inference
+
+All evaluation requests MUST contain held-out ground-truth labels. A model
+probability vector is not by itself a measured confidence or a proof of accuracy.
+
+### POST /api/evaluation/run
+
+Example with a binary balanced evaluation and aligned random baseline:
+
+    {
+      "options":["UP","DOWN"],
+      "calibrationBins":10,
+      "observations":[
+        {"observationId":"t1","actual":"UP","predicted":"UP","probabilities":{"UP":0.9,"DOWN":0.1}},
+        {"observationId":"t2","actual":"DOWN","predicted":"DOWN","probabilities":{"UP":0.2,"DOWN":0.8}}
+      ],
+      "baselineObservations":[
+        {"observationId":"t1","actual":"UP","predicted":"UP","probabilities":{"UP":0.5,"DOWN":0.5}},
+        {"observationId":"t2","actual":"DOWN","predicted":"UP","probabilities":{"UP":0.5,"DOWN":0.5}}
+      ]
+    }
+
+Results: accuracy, balancedAccuracy, macroPrecision, macroRecall, macroF1,
+perClass (precision/recall/F1 and support), confusionMatrix actual-to-predicted,
+multiclass Brier (sum of squared class errors per observation), logLoss (clamp
+true-class probability to 1e-15 for finite loss), ece, reliability bins,
+and optional skill scores. Macros average classes with positive truth support;
+zero predicted counts yield precision=0, absent truth support has null recall.
+The ECE bins use reported-choice confidence, rather than assuming it has been
+calibrated. Bins with zero observations have count=0, not meaningful calibration.
+Brier/log-loss skill is 1-modelLoss/baselineLoss on the same test cases; zero
+baseline loss returns null skill. Every observationId must be unique, matched,
+ordered and ground truth identical when a baseline is supplied.
+
+### POST /api/evaluation/monte-carlo
+
+    {
+      "options":["UP","DOWN"],
+      "testLabels":["UP","DOWN","UP","UP","DOWN"],
+      "baseline":"uniform","iterations":1000,"seed":42,
+      "observedPredictions":["UP","DOWN","UP","DOWN","DOWN"]
+    }
+
+Options can be 1..256, test labels 1..2000, iteration count 20..10000, and
+iterations * sample count <= 1,000,000. Majority/prior require separate
+trainingLabels and cannot access test labels for fitting. Each simulated
+member answers the SAME test questions. Output contains meanAccuracy,
+standardDeviation, normal-approximation 95% Monte Carlo mean error interval,
+nullPercentile05, nullMedian, nullPercentile95, bestObservedRandomAccuracy,
+optional modelObservedAccuracy and empiricalUpperTailP
+((number random runs >= observed + 1)/(iterations + 1)), plus seed,
+engineVersion and reproducible randomAccuracies. The best observed random
+run is NOT the expected baseline performance. Null percentiles are NOT a
+confidence interval on a real-world population accuracy.
+
+### POST /api/evaluation/paired
+
+    {
+      "options":["UP","DOWN"], "loss":"brier",
+      "sampleStructure":"iid", "replications":2000,
+      "seed":42, "comparisons":3,
+      "model":[{"observationId":"t1","actual":"UP","predicted":"UP","probabilities":{"UP":0.9,"DOWN":0.1}}],
+      "baseline":[{"observationId":"t1","actual":"UP","predicted":"UP","probabilities":{"UP":0.5,"DOWN":0.5}}]
+    }
+
+The samples MUST match one-to-one by ID, truth and order. Improvement is the
+positive reduction in average loss (baseline minus model). IID requires
+explicit sampleStructure="iid": paired bootstrap percentile interval and
+two-sided model-label-swap permutation p-value (exact for <=15 pairs, otherwise
+seeded randomized with add-one correction); the Bonferroni-adjusted p-value
+requires the caller to state the number of simultaneous comparisons.
+Paired label swapping requires exchangeability under the null, and IID pairs.
+For ordered correlated observations choose sampleStructure="timeseries",
+chronologicalOrderConfirmed=true and blockLength >= 2. The latter uses
+a circular moving-block bootstrap confidence interval and returns NULL
+permutation p-values. The caller must prevent temporal leakage; selecting
+blockLength and checking dependence are analyst responsibilities. Both modes
+report sample count, effect size and methodological assumptions.
+
+### POST /api/evaluation/binomial
+
+    {"successes":9,"trials":10,
+     "fixedNullSuccessProbability":0.5,
+     "independentTrialsConfirmed":true}
+
+Reports the exact one-sided upper tail P(X >= successes), using stable
+log-space binomial summation. **Rejects** absent independence confirmation.
+Only valid if trials are iid Bernoulli with a known fixed null probability;
+do not use this directly for time-series, unequal choice counts, selected
+best-of-many models or unlabeled predictions.
+
+**Security / honesty:** these endpoints do NOT train a classifier, verify
+chronological splits, prove calibration, trade stocks or produce real
+Jev/Laya predictions. Use controlled held-out evaluation and independently
+verifiable data provenance.

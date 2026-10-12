@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "RandSystem1 API",
-    "version": "0.2.0",
-    "description": "Iterations 001-002: mock decision adapter and random baseline simulation engine."
+    "version": "0.3.0",
+    "description": "Iterations 001-003: simulated baseline generation, labeled classification evaluation, Monte Carlo and guarded inference."
   },
   "paths": {
     "/api/health": {
@@ -96,6 +96,98 @@
           },
           "400": {
             "description": "Invalid baseline, alpha, options, training labels or batch size"
+          }
+        }
+      }
+    },
+    "/api/evaluation/run": {
+      "post": {
+        "summary": "Classification and probability metrics, calibration, optional aligned skill scores.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvaluationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Classification and probability metrics, calibration, optional aligned skill scores. See docs/API.md for response semantics."
+          },
+          "400": {
+            "description": "Invalid request, unsafe inference assumptions, dataset alignment or nonfinite values."
+          }
+        }
+      }
+    },
+    "/api/evaluation/monte-carlo": {
+      "post": {
+        "summary": "Seeded random null distribution for fixed labeled examples; optional empirical upper-tail.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MonteCarloRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Seeded random null distribution for fixed labeled examples; optional empirical upper-tail. See docs/API.md for response semantics."
+          },
+          "400": {
+            "description": "Invalid request, unsafe inference assumptions, dataset alignment or nonfinite values."
+          }
+        }
+      }
+    },
+    "/api/evaluation/paired": {
+      "post": {
+        "summary": "Paired loss improvement and bootstrap interval; IID permutation or timeseries block bootstrap.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PairedComparisonRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Paired loss improvement and bootstrap interval; IID permutation or timeseries block bootstrap. See docs/API.md for response semantics."
+          },
+          "400": {
+            "description": "Invalid request, unsafe inference assumptions, dataset alignment or nonfinite values."
+          }
+        }
+      }
+    },
+    "/api/evaluation/binomial": {
+      "post": {
+        "summary": "Exact one-sided binomial tail only when IID assumptions explicitly confirmed.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExactBinomialRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Exact one-sided binomial tail only when IID assumptions explicitly confirmed. See docs/API.md for response semantics."
+          },
+          "400": {
+            "description": "Invalid request, unsafe inference assumptions, dataset alignment or nonfinite values."
           }
         }
       }
@@ -310,6 +402,246 @@
                 }
               }
             }
+          }
+        }
+      },
+      "ScoredObservation": {
+        "type": "object",
+        "required": [
+          "observationId",
+          "actual",
+          "predicted",
+          "probabilities"
+        ],
+        "properties": {
+          "observationId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "actual": {
+            "type": "string"
+          },
+          "predicted": {
+            "type": "string"
+          },
+          "probabilities": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        }
+      },
+      "EvaluationRequest": {
+        "type": "object",
+        "required": [
+          "options",
+          "observations"
+        ],
+        "properties": {
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 256,
+            "uniqueItems": true
+          },
+          "observations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScoredObservation"
+            },
+            "minItems": 1,
+            "maxItems": 100000
+          },
+          "calibrationBins": {
+            "type": "integer",
+            "minimum": 2,
+            "maximum": 100,
+            "default": 10
+          },
+          "baselineObservations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScoredObservation"
+            },
+            "description": "Optional aligned held-out baseline observations for skill scores"
+          }
+        }
+      },
+      "MonteCarloRequest": {
+        "type": "object",
+        "required": [
+          "options",
+          "testLabels"
+        ],
+        "properties": {
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 256
+          },
+          "testLabels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 2000
+          },
+          "baseline": {
+            "type": "string",
+            "enum": [
+              "uniform",
+              "dirichlet",
+              "majority",
+              "prior"
+            ],
+            "default": "uniform"
+          },
+          "iterations": {
+            "type": "integer",
+            "minimum": 20,
+            "maximum": 10000,
+            "default": 1000
+          },
+          "seed": {
+            "type": "integer",
+            "format": "int32",
+            "default": 42
+          },
+          "alpha": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "default": 1
+          },
+          "trainingLabels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Only for fitted majority/prior, must come exclusively from training split"
+          },
+          "observedPredictions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Optional aligned, already evaluated model predictions"
+          }
+        }
+      },
+      "PairedComparisonRequest": {
+        "type": "object",
+        "required": [
+          "options",
+          "model",
+          "baseline",
+          "sampleStructure"
+        ],
+        "properties": {
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "model": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScoredObservation"
+            }
+          },
+          "baseline": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScoredObservation"
+            }
+          },
+          "loss": {
+            "type": "string",
+            "enum": [
+              "brier",
+              "logloss"
+            ],
+            "default": "brier"
+          },
+          "sampleStructure": {
+            "type": "string",
+            "enum": [
+              "iid",
+              "timeseries"
+            ],
+            "description": "Explicit assumption required; no implicit IID inference."
+          },
+          "blockLength": {
+            "type": "integer",
+            "default": 1,
+            "description": "For timeseries choose length >=2 and <= sample count."
+          },
+          "replications": {
+            "type": "integer",
+            "minimum": 200,
+            "maximum": 20000,
+            "default": 2000
+          },
+          "seed": {
+            "type": "integer",
+            "format": "int32",
+            "default": 42
+          },
+          "confidenceLevel": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "exclusiveMaximum": 1,
+            "default": 0.95
+          },
+          "comparisons": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000,
+            "default": 1
+          },
+          "chronologicalOrderConfirmed": {
+            "type": "boolean",
+            "default": false,
+            "description": "Must be true for timeseries. Labels must not leak future data."
+          }
+        }
+      },
+      "ExactBinomialRequest": {
+        "type": "object",
+        "required": [
+          "successes",
+          "trials",
+          "fixedNullSuccessProbability",
+          "independentTrialsConfirmed"
+        ],
+        "properties": {
+          "successes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "trials": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "fixedNullSuccessProbability": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "independentTrialsConfirmed": {
+            "type": "boolean",
+            "description": "Must explicitly confirm IID Bernoulli null with fixed known probability."
           }
         }
       }

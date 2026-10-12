@@ -2,6 +2,7 @@ using RandSystem1.Abstractions.Interfaces;
 using RandSystem1.Abstractions.Models;
 using RandSystem1.Core.Validation;
 using RandSystem1.Core.Random;
+using RandSystem1.Core.Statistics;
 using RandSystem1.Infrastructure.ModelAdapters;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -30,6 +31,34 @@ app.MapPost("/api/random/generate", (BaselineRunRequest request, CancellationTok
         return Results.ValidationProblem(new Dictionary<string, string[]> { ["random"] = [error.Message] });
     }
 }).WithName("GenerateRandomBaselines");
+
+app.MapPost("/api/evaluation/run", (EvaluationRequest request) =>
+{
+    try { return Results.Ok(ClassificationMetrics.Evaluate(request)); }
+    catch (ArgumentException error)
+    { return Results.ValidationProblem(new Dictionary<string, string[]> { ["evaluation"] = [error.Message] }); }
+}).WithName("EvaluateClassification");
+
+app.MapPost("/api/evaluation/monte-carlo", (MonteCarloRequest request, CancellationToken ct) =>
+{
+    try { return Results.Ok(MonteCarloEvaluation.Run(request, ct)); }
+    catch (ArgumentException error)
+    { return Results.ValidationProblem(new Dictionary<string, string[]> { ["monteCarlo"] = [error.Message] }); }
+}).WithName("EvaluateMonteCarlo");
+
+app.MapPost("/api/evaluation/paired", (PairedComparisonRequest request) =>
+{
+    try { return Results.Ok(StatisticalInference.Compare(request)); }
+    catch (ArgumentException error)
+    { return Results.ValidationProblem(new Dictionary<string, string[]> { ["comparison"] = [error.Message] }); }
+}).WithName("EvaluatePairedDifference");
+
+app.MapPost("/api/evaluation/binomial", (ExactBinomialRequest request) =>
+{
+    try { return Results.Ok(StatisticalInference.ExactBinomialUpperTail(request)); }
+    catch (ArgumentException error)
+    { return Results.ValidationProblem(new Dictionary<string, string[]> { ["binomial"] = [error.Message] }); }
+}).WithName("EvaluateBinomialUpperTail");
 
 app.MapPost("/api/models/predict", async (
     DecisionRequest request,
