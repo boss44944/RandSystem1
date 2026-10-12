@@ -1,6 +1,7 @@
 using RandSystem1.Abstractions.Interfaces;
 using RandSystem1.Abstractions.Models;
 using RandSystem1.Core.Validation;
+using RandSystem1.Core.Random;
 using RandSystem1.Infrastructure.ModelAdapters;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,6 +18,18 @@ app.MapGet("/api/health", () => Results.Ok(new { status = "ok", application = "R
 app.MapGet("/api/models", (IEnumerable<IDecisionModel> models) =>
     Results.Ok(models.Select(x => new { modelId = x.ModelId, isSimulation = true })))
     .WithName("ListModels");
+
+app.MapPost("/api/random/generate", (BaselineRunRequest request, CancellationToken cancellationToken) =>
+{
+    try
+    {
+        return Results.Ok(BaselineEngine.Run(request, cancellationToken));
+    }
+    catch (ArgumentException error)
+    {
+        return Results.ValidationProblem(new Dictionary<string, string[]> { ["random"] = [error.Message] });
+    }
+}).WithName("GenerateRandomBaselines");
 
 app.MapPost("/api/models/predict", async (
     DecisionRequest request,

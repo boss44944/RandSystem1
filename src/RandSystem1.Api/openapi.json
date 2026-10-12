@@ -1,18 +1,102 @@
 {
   "openapi": "3.0.3",
-  "info": {"title": "RandSystem1 Foundation API", "version": "0.1.0", "description": "Iteration 001 endpoints only. Mock predictions are simulated."},
+  "info": {
+    "title": "RandSystem1 API",
+    "version": "0.2.0",
+    "description": "Iterations 001-002: mock decision adapter and random baseline simulation engine."
+  },
   "paths": {
-    "/api/health": {"get": {"responses": {"200": {"description": "Service health"}}}},
-    "/api/models": {"get": {"responses": {"200": {"description": "Available models"}}}},
+    "/api/health": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Service health"
+          }
+        }
+      }
+    },
+    "/api/models": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Available models"
+          }
+        }
+      }
+    },
     "/api/models/predict": {
       "post": {
-        "parameters": [{"name": "modelId", "in": "query", "required": false, "schema": {"type": "string", "default": "mock-uniform"}}],
-        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/DecisionRequest"}}}},
+        "parameters": [
+          {
+            "name": "modelId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "mock-uniform"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionRequest"
+              }
+            }
+          }
+        },
         "responses": {
-          "200": {"description": "Simulated prediction", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/DecisionPrediction"}}}},
-          "400": {"description": "Invalid request"},
-          "404": {"description": "Model not found"},
-          "502": {"description": "Model output failed validation"}
+          "200": {
+            "description": "Simulated prediction",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecisionPrediction"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "404": {
+            "description": "Model not found"
+          },
+          "502": {
+            "description": "Model output failed validation"
+          }
+        }
+      }
+    },
+    "/api/random/generate": {
+      "post": {
+        "summary": "Generate reproducible simulated random baselines and independent ensemble members",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BaselineRunRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Simulation with per-member seeds, probabilities and sampled choices",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaselineRunResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid baseline, alpha, options, training labels or batch size"
+          }
         }
       }
     }
@@ -21,27 +105,212 @@
     "schemas": {
       "DecisionRequest": {
         "type": "object",
-        "required": ["requestId", "taskType", "options"],
+        "required": [
+          "requestId",
+          "taskType",
+          "options"
+        ],
         "properties": {
-          "requestId": {"type": "string"},
-          "taskType": {"type": "string"},
-          "options": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
-          "context": {"type": "object", "additionalProperties": true}
+          "requestId": {
+            "type": "string"
+          },
+          "taskType": {
+            "type": "string"
+          },
+          "options": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "context": {
+            "type": "object",
+            "additionalProperties": true
+          }
         }
       },
       "DecisionPrediction": {
         "type": "object",
-        "required": ["requestId", "taskType", "modelId", "modelVersion", "probabilities", "predictedOption", "latencyMs", "predictedAt", "isSimulation"],
+        "required": [
+          "requestId",
+          "taskType",
+          "modelId",
+          "modelVersion",
+          "probabilities",
+          "predictedOption",
+          "latencyMs",
+          "predictedAt",
+          "isSimulation"
+        ],
         "properties": {
-          "requestId": {"type": "string"},
-          "taskType": {"type": "string"},
-          "modelId": {"type": "string"},
-          "modelVersion": {"type": "string"},
-          "probabilities": {"type": "object", "additionalProperties": {"type": "number", "minimum": 0, "maximum": 1}},
-          "predictedOption": {"type": "string"},
-          "latencyMs": {"type": "number", "minimum": 0},
-          "predictedAt": {"type": "string", "format": "date-time"},
-          "isSimulation": {"type": "boolean"}
+          "requestId": {
+            "type": "string"
+          },
+          "taskType": {
+            "type": "string"
+          },
+          "modelId": {
+            "type": "string"
+          },
+          "modelVersion": {
+            "type": "string"
+          },
+          "probabilities": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "predictedOption": {
+            "type": "string"
+          },
+          "latencyMs": {
+            "type": "number",
+            "minimum": 0
+          },
+          "predictedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "isSimulation": {
+            "type": "boolean"
+          }
+        }
+      },
+      "BaselineRunRequest": {
+        "type": "object",
+        "required": [
+          "baseline",
+          "options"
+        ],
+        "properties": {
+          "baseline": {
+            "type": "string",
+            "enum": [
+              "uniform",
+              "dirichlet",
+              "majority",
+              "prior"
+            ]
+          },
+          "options": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 256,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "seed": {
+            "type": "integer",
+            "format": "int32",
+            "default": 42
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "default": 1
+          },
+          "samplesPerModel": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2000,
+            "default": 1
+          },
+          "alpha": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "default": 1.0
+          },
+          "trainingLabels": {
+            "type": "array",
+            "maxItems": 100000,
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "BaselineRunResult": {
+        "type": "object",
+        "description": "All probabilities are constructed simulations and not observed accuracy or calibrated confidence.",
+        "properties": {
+          "baseline": {
+            "type": "string"
+          },
+          "engineVersion": {
+            "type": "string"
+          },
+          "seed": {
+            "type": "integer"
+          },
+          "count": {
+            "type": "integer"
+          },
+          "samplesPerModel": {
+            "type": "integer"
+          },
+          "alpha": {
+            "type": "number",
+            "nullable": true
+          },
+          "trainingLabelCount": {
+            "type": "integer",
+            "nullable": true
+          },
+          "isSimulation": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "probabilityMeaning": {
+            "type": "string"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "modelIndex": {
+                  "type": "integer"
+                },
+                "modelId": {
+                  "type": "string"
+                },
+                "seedHex": {
+                  "type": "string"
+                },
+                "draws": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "sampleIndex": {
+                        "type": "integer"
+                      },
+                      "probabilities": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "type": "number"
+                        }
+                      },
+                      "sampledOption": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }

@@ -4,8 +4,8 @@ Source of product requirements: [complete original RandSystem1 taskbook](PROJECT
 
 | Iteration | Objective | Status |
 |---|---|---|
-| 001 | Solution, contract, mock, API, tests and docs | Foundation committed; formal Hub WorkItem 001 claimed; regression verification and independent review pending |
-| 002 | Uniform/Dirichlet, majority/prior, independent ensemble and reproducible seeds | Planned |
+| 001 | Solution, contract, mock, API, tests and docs | Accepted in Agent Hub; Done / merged to main (4f6e5fb) |
+| 002 | Uniform/Dirichlet, majority/prior, independent ensemble and reproducible seeds | Implementation and local validation complete; Hub verification/CI pending |
 | 003 | Metrics, skill, Monte Carlo and valid statistical inference | Planned |
 | 004 | Model error overlap, disagreement and oracle upper bound | Planned |
 | 005 | Fusion strategies, risk policy, abstention | Planned |
