@@ -4,7 +4,7 @@ Source of product requirements: [complete original RandSystem1 taskbook](PROJECT
 
 | Iteration | Objective | Status |
 |---|---|---|
-| 001 | Solution, contract, mock, API, tests and docs | Build, 10/10 tests and API smoke verified; Hub registration/review pending |
+| 001 | Solution, contract, mock, API, tests and docs | Foundation committed; formal Hub WorkItem 001 claimed; regression verification and independent review pending |
 | 002 | Uniform/Dirichlet, majority/prior, independent ensemble and reproducible seeds | Planned |
 | 003 | Metrics, skill, Monte Carlo and valid statistical inference | Planned |
 | 004 | Model error overlap, disagreement and oracle upper bound | Planned |
@@ -24,4 +24,4 @@ Source of product requirements: [complete original RandSystem1 taskbook](PROJECT
 
 ## Initial setup caveat
 
-The connected AgentHub MCP does not expose project/requirement creation. The corresponding Hub HTTP endpoints returned 401 to an unauthenticated server request at initialization. No Hub Requirement, WorkItem or claimed Run can be asserted until an authorized operation succeeds. This does not prevent local isolated scaffold and source tests.
+The project has since been registered in Agent Hub as ProjectId \`73d9c019dfeb4f1fb9f139d46fc1bb3a\`. Approved Requirement \`RANDS1-001\` is linked to WorkItem \`114de40fab38403181bdd06db91a2b30\` and SaaS Run \`6389f3fe7a7741c4a8c9c44e29e19fc0\`. The developer uses a Hub-allocated isolated Git Worktree; source-level completion must not be confused with independent Verification/Review or human final confirmation. Future iterations remain gated by formal acceptance.
