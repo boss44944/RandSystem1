@@ -67,6 +67,20 @@ app.MapPost("/api/evaluation/binomial", (ExactBinomialRequest request) =>
     { return Results.ValidationProblem(new Dictionary<string, string[]> { ["binomial"] = [error.Message] }); }
 }).WithName("EvaluateBinomialUpperTail");
 
+app.MapPost("/api/fusion/holdout", (FusionHoldoutRequest request) =>
+{
+    try { return Results.Ok(FusionHoldoutComparison.Evaluate(request)); }
+    catch (ArgumentException error)
+    { return Results.ValidationProblem(new Dictionary<string, string[]> { ["fusionHoldout"] = [error.Message] }); }
+}).WithName("CompareFrozenFusionOnHoldout");
+
+app.MapPost("/api/fusion/predict", (FusionRequest request) =>
+{
+    try { return Results.Ok(DecisionFusion.Predict(request)); }
+    catch (ArgumentException error)
+    { return Results.ValidationProblem(new Dictionary<string, string[]> { ["fusion"] = [error.Message] }); }
+}).WithName("PredictFusion");
+
 app.MapPost("/api/models/predict", async (
     DecisionRequest request,
     string? modelId,

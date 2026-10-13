@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "RandSystem1 API",
-    "version": "0.4.0",
-    "description": "Iterations 001-004: random, statistical evaluation and aligned model complementarity."
+    "version": "0.5.0",
+    "description": "Iterations 001-005: random baselines, statistical evaluation, complementarity and guarded frozen-weight fusion."
   },
   "paths": {
     "/api/health": {
@@ -218,6 +218,66 @@
           },
           "400": {
             "description": "Invalid/misaligned models or labels"
+          }
+        }
+      }
+    },
+    "/api/fusion/predict": {
+      "post": {
+        "summary": "Validated equal/static/performance/dynamic probability fusion with explicit failures and default ABSTAIN",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FusionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FusionResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid configuration, input or alignment"
+          }
+        }
+      }
+    },
+    "/api/fusion/holdout": {
+      "post": {
+        "summary": "Frozen-validation-weight holdout accuracy/Brier comparison to models and theoretical uniform baseline",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FusionHoldoutRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FusionHoldoutReport"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid configuration, input or alignment"
           }
         }
       }
@@ -877,6 +937,452 @@
           }
         },
         "description": "Oracle is a hindsight ceiling, not a deployable model fusion result. Accuracy/oracle null without truth."
+      },
+      "FusionModelPrediction": {
+        "type": "object",
+        "required": [
+          "modelId",
+          "status"
+        ],
+        "properties": {
+          "modelId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "success",
+              "missing",
+              "failed",
+              "timeout",
+              "invalid",
+              "cancelled"
+            ]
+          },
+          "probabilities": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number",
+              "format": "double"
+            },
+            "description": "Finite, nonnegative per-option probabilities summing to one."
+          },
+          "isSimulation": {
+            "type": "boolean"
+          }
+        }
+      },
+      "FusionValidationEvidence": {
+        "type": "object",
+        "required": [
+          "modelId",
+          "taskType",
+          "split",
+          "sampleCount",
+          "brierLoss",
+          "baselineBrierLoss",
+          "lowerSkillBound",
+          "validationEndedAt"
+        ],
+        "properties": {
+          "modelId": {
+            "type": "string"
+          },
+          "taskType": {
+            "type": "string"
+          },
+          "segment": {
+            "type": "string",
+            "nullable": true
+          },
+          "split": {
+            "type": "string",
+            "enum": [
+              "validation"
+            ]
+          },
+          "sampleCount": {
+            "type": "integer"
+          },
+          "brierLoss": {
+            "type": "number",
+            "format": "double"
+          },
+          "baselineBrierLoss": {
+            "type": "number",
+            "format": "double"
+          },
+          "lowerSkillBound": {
+            "type": "number",
+            "format": "double"
+          },
+          "validationEndedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "FusionStrategyEvidence": {
+        "type": "object",
+        "required": [
+          "strategy",
+          "taskType",
+          "split",
+          "sampleCount",
+          "lowerBrierSkillBound",
+          "validationEndedAt",
+          "modelIds",
+          "frozenWeights"
+        ],
+        "properties": {
+          "strategy": {
+            "type": "string"
+          },
+          "taskType": {
+            "type": "string"
+          },
+          "segment": {
+            "type": "string",
+            "nullable": true
+          },
+          "split": {
+            "type": "string",
+            "enum": [
+              "validation"
+            ]
+          },
+          "sampleCount": {
+            "type": "integer"
+          },
+          "lowerBrierSkillBound": {
+            "type": "number",
+            "format": "double"
+          },
+          "validationEndedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "modelIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "frozenWeights": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number",
+              "format": "double"
+            },
+            "description": "Finite, nonnegative per-option probabilities summing to one."
+          }
+        }
+      },
+      "FusionRiskPolicy": {
+        "type": "object",
+        "properties": {
+          "minConfidence": {
+            "type": "number",
+            "format": "double"
+          },
+          "minValidatedSkillLowerBound": {
+            "type": "number",
+            "format": "double"
+          },
+          "minValidationSamples": {
+            "type": "integer"
+          },
+          "minExpectedBenefit": {
+            "type": "number",
+            "format": "double"
+          },
+          "maxPotentialLoss": {
+            "type": "number",
+            "format": "double"
+          },
+          "maxExposure": {
+            "type": "number",
+            "format": "double"
+          },
+          "allowSimulatedExecution": {
+            "type": "boolean"
+          }
+        }
+      },
+      "FusionRequest": {
+        "type": "object",
+        "required": [
+          "requestId",
+          "taskType",
+          "options",
+          "models"
+        ],
+        "properties": {
+          "requestId": {
+            "type": "string"
+          },
+          "taskType": {
+            "type": "string"
+          },
+          "options": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 256,
+            "items": {
+              "type": "string"
+            }
+          },
+          "models": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/FusionModelPrediction"
+            }
+          },
+          "strategy": {
+            "type": "string",
+            "enum": [
+              "equal",
+              "static",
+              "performance",
+              "dynamic"
+            ]
+          },
+          "staticWeights": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number",
+              "format": "double"
+            },
+            "description": "Finite, nonnegative per-option probabilities summing to one."
+          },
+          "validation": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FusionValidationEvidence"
+            }
+          },
+          "strategyEvidence": {
+            "$ref": "#/components/schemas/FusionStrategyEvidence"
+          },
+          "segment": {
+            "type": "string"
+          },
+          "decisionAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "risk": {
+            "$ref": "#/components/schemas/FusionRiskPolicy"
+          },
+          "expectedBenefit": {
+            "type": "number",
+            "format": "double"
+          },
+          "potentialLoss": {
+            "type": "number",
+            "format": "double"
+          },
+          "exposure": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "FusionModelStatus": {
+        "type": "object",
+        "properties": {
+          "modelId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "weight": {
+            "type": "number",
+            "format": "double"
+          },
+          "isSimulation": {
+            "type": "boolean"
+          }
+        }
+      },
+      "FusionResult": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string"
+          },
+          "strategy": {
+            "type": "string"
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "EXECUTE",
+              "ABSTAIN"
+            ]
+          },
+          "predictedOption": {
+            "type": "string",
+            "nullable": true
+          },
+          "probabilities": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number",
+              "format": "double"
+            },
+            "description": "Finite, nonnegative per-option probabilities summing to one."
+          },
+          "confidence": {
+            "type": "number",
+            "nullable": true
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FusionModelStatus"
+            }
+          },
+          "reason": {
+            "type": "string"
+          },
+          "isSimulation": {
+            "type": "boolean"
+          },
+          "probabilityMeaning": {
+            "type": "string"
+          },
+          "validationMeaning": {
+            "type": "string"
+          }
+        }
+      },
+      "FusionHoldoutCase": {
+        "type": "object",
+        "required": [
+          "observationId",
+          "observedAt",
+          "actual",
+          "modelProbabilities"
+        ],
+        "properties": {
+          "observationId": {
+            "type": "string"
+          },
+          "observedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actual": {
+            "type": "string"
+          },
+          "modelProbabilities": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "number",
+                "format": "double"
+              },
+              "description": "Finite, nonnegative per-option probabilities summing to one."
+            }
+          }
+        }
+      },
+      "FusionHoldoutRequest": {
+        "type": "object",
+        "required": [
+          "options",
+          "frozenWeights",
+          "weightSourceSplit",
+          "weightsFrozenAt",
+          "cases"
+        ],
+        "properties": {
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "frozenWeights": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number",
+              "format": "double"
+            },
+            "description": "Finite, nonnegative per-option probabilities summing to one."
+          },
+          "weightSourceSplit": {
+            "type": "string"
+          },
+          "weightsFrozenAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cases": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FusionHoldoutCase"
+            }
+          }
+        }
+      },
+      "FusionScore": {
+        "type": "object",
+        "properties": {
+          "modelId": {
+            "type": "string"
+          },
+          "accuracy": {
+            "type": "number",
+            "format": "double"
+          },
+          "brierLoss": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "FusionHoldoutReport": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "integer"
+          },
+          "fusion": {
+            "$ref": "#/components/schemas/FusionScore"
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FusionScore"
+            }
+          },
+          "bestSingleInHindsight": {
+            "$ref": "#/components/schemas/FusionScore"
+          },
+          "uniformRandomDistribution": {
+            "$ref": "#/components/schemas/FusionScore"
+          },
+          "fusionAccuracyMinusBestSingle": {
+            "type": "number",
+            "format": "double"
+          },
+          "fusionBrierMinusBestSingle": {
+            "type": "number",
+            "format": "double"
+          },
+          "interpretation": {
+            "type": "string"
+          }
+        }
       }
     }
   }

@@ -1,6 +1,6 @@
 # API / 接口
 
-Endpoints implemented through Iteration 004:
+Endpoints implemented through Iteration 005:
 
 | Method | Path | Behavior |
 |---|---|---|
@@ -13,10 +13,12 @@ Endpoints implemented through Iteration 004:
 | POST | /api/evaluation/paired | Paired model-versus-baseline loss comparison, bootstrap and guarded significance |
 | POST | /api/evaluation/binomial | Exact binomial upper-tail under explicitly confirmed IID Bernoulli assumptions |
 | POST | /api/evaluation/complementarity | Strictly aligned joint errors, prediction disagreement, error Phi and Oracle upper bound |
+| POST | /api/fusion/predict | Equal/static/performance/dynamic fusion with ABSTAIN and business gates |
+| POST | /api/fusion/holdout | Descriptive evaluation of frozen fusion weights on later labeled cases vs single models/uniform baseline |
 
 Invalid request returns HTTP 400; an unknown model returns 404. A faulty model output is rejected with HTTP 502. An OpenAPI JSON endpoint is exposed at /openapi/v1.json in development mode.
 
-The following routes are **planned, not implemented**: /api/fusion/predict, /api/backtest/run, /api/backtest/{id}. Long-running jobs, database persistence and CLI are later iterations.
+The following routes are **planned, not implemented**: /api/backtest/run, /api/backtest/{id}. Long-running jobs, database persistence and CLI are later iterations.
 
 ## Iteration 002: random baseline simulation
 
@@ -180,3 +182,86 @@ invalid to tune fusion weights using these held-out labels.
 Unlabeled mode (omit groundTruth): returns only per-model prediction counts,
 model-pair agreement and disagreement; every accuracy/error/oracle field is
 null. Disagreement is NOT evidence of superiority to random guessing.
+
+## Iteration 005: decision fusion
+
+### POST /api/fusion/predict
+
+Request `options` contains 1..256 unique categories, and `models` contains
+1..20 distinct model IDs. Every model must state `status`: `success`,
+`missing`, `failed`, `timeout`, `invalid` or `cancelled`.
+A `success` requires a finite, normalized probability vector; corrupt vectors
+are exposed as invalid and force ABSTAIN. Partial ensemble execution is NOT
+silently allowed. Supported `strategy` names: `equal`, `static`,
+`performance`, `dynamic`. Static weights cover every model and are
+normalized over currently usable models, but a failure still blocks execution.
+
+`performance` weights are proportional to positive Brier Skill
+`max(0, 1 - brierLoss/baselineBrierLoss)` computed solely from caller-supplied
+past `validation` data, with minimum samples and a positive conservative
+`lowerSkillBound`. `dynamic` additionally requires a matching `segment`.
+Neither accepts training/test evidence as weight-selection data.
+
+The decision gate requires **independent, earlier validation of the frozen
+fusion strategy**, not just validation of its constituent models:
+`strategyEvidence` names the exact strategy, segment, model IDs and
+normalized `frozenWeights`, past `validationEndedAt`, sample count and
+a conservative positive `lowerBrierSkillBound`. Inconsistent, missing or
+future evidence causes ABSTAIN. Probabilities remain *model-reported*, not
+measured skill or calibrated business odds. Every evidence row is supplied
+by the caller and its real provenance MUST be audited externally; an API
+field alone does not certify that results are genuinely out-of-sample.
+
+Example deterministic equal-weight request (illustrative reported predictions,
+NOT measured real-model performance; replace synthetic evidence with genuinely
+independently established validation evidence before production decisions):
+
+```json
+{
+  "requestId": "decision-01",
+  "taskType": "direction",
+  "options": ["UP", "DOWN"],
+  "models": [
+    {"modelId":"A","status":"success","probabilities":{"UP":0.9,"DOWN":0.1}},
+    {"modelId":"B","status":"success","probabilities":{"UP":0.7,"DOWN":0.3}}
+  ],
+  "strategy": "equal",
+  "decisionAt": "2026-10-13T12:00:00Z",
+  "strategyEvidence": {
+    "strategy":"equal","taskType":"direction","segment":null,
+    "split":"validation","sampleCount":100,"lowerBrierSkillBound":0.03,
+    "validationEndedAt":"2026-10-10T12:00:00Z",
+    "modelIds":["A","B"],"frozenWeights":{"A":0.5,"B":0.5}
+  },
+  "risk":{"minConfidence":0.6,"minValidationSamples":30}
+}
+```
+
+The response contains `decision` (`EXECUTE` or `ABSTAIN`),
+`predictedOption`, `probabilities`, `confidence`, and per-model
+`status/reason/weight/isSimulation`. ABSTAIN may still report a
+descriptive probability vector, but **must not** be treated as authorization
+to act. Simulated predictions default to ABSTAIN. Risk thresholds support
+`minExpectedBenefit`, `maxPotentialLoss`, `maxExposure`; when configured,
+corresponding request values are mandatory and violating limits blocks
+execution. No actual orders or external side effects are performed.
+
+### POST /api/fusion/holdout
+
+This endpoint scores a fixed, **already selected** `frozenWeights` vector
+with `weightSourceSplit="validation"` and `weightsFrozenAt` earlier than
+every labeled observation `observedAt`. Each later test case has a unique
+`observationId`, a true `actual` option, and exactly aligned
+`modelProbabilities` by model ID. It computes the fixed fusion's accuracy
+and multiclass Brier loss alongside every single model and the theoretical
+uniform random-distribution baseline. `bestSingleInHindsight` is selected
+*after seeing holdout labels only for a descriptive comparator*, **never**
+for assigning weights or live predictions. The report allows negative
+`fusionAccuracyMinusBestSingle`; no improvement or significance is assumed.
+This first increment does not perform temporal purge/embargo or block bootstrap;
+the full walk-forward engine is planned in Iteration 006.
+
+Validation on the same sample as weight fitting, even if called
+`validation`, overestimates strategy advantage. Pin data source, strategy,
+model version, validation time cutoffs, calibration protocol, experiment seed
+and holdout split independently when using these endpoints.

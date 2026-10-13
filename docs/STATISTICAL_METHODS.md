@@ -1,6 +1,6 @@
 # Statistical Methods / 统计方法
 
-**Status:** Iterations 001-004: statistical metrics, Monte Carlo, guarded inference and aligned model complementarity executable; fusion remains future work.
+**Status:** Iterations 001-005: statistical evaluation, complementarity, frozen-weight fusion, fail-closed decision gates and later holdout comparisons executable.
 
 ## Baselines
 
