@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "RandSystem1 API",
-    "version": "0.3.0",
-    "description": "Iterations 001-003: simulated baseline generation, labeled classification evaluation, Monte Carlo and guarded inference."
+    "version": "0.4.0",
+    "description": "Iterations 001-004: random, statistical evaluation and aligned model complementarity."
   },
   "paths": {
     "/api/health": {
@@ -188,6 +188,36 @@
           },
           "400": {
             "description": "Invalid request, unsafe inference assumptions, dataset alignment or nonfinite values."
+          }
+        }
+      }
+    },
+    "/api/evaluation/complementarity": {
+      "post": {
+        "summary": "Alignment-safe multi-model disagreement, error association, joint correctness and Oracle upper bound",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComplementarityRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Complementarity report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplementarityReport"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid/misaligned models or labels"
           }
         }
       }
@@ -644,6 +674,209 @@
             "description": "Must explicitly confirm IID Bernoulli null with fixed known probability."
           }
         }
+      },
+      "ModelChoice": {
+        "type": "object",
+        "required": [
+          "observationId",
+          "predictedOption"
+        ],
+        "properties": {
+          "observationId": {
+            "type": "string"
+          },
+          "predictedOption": {
+            "type": "string"
+          }
+        }
+      },
+      "NamedModelChoices": {
+        "type": "object",
+        "required": [
+          "modelId",
+          "predictions"
+        ],
+        "properties": {
+          "modelId": {
+            "type": "string"
+          },
+          "predictions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ModelChoice"
+            },
+            "minItems": 1,
+            "maxItems": 20000
+          }
+        }
+      },
+      "ObservedTruth": {
+        "type": "object",
+        "required": [
+          "observationId",
+          "actual"
+        ],
+        "properties": {
+          "observationId": {
+            "type": "string"
+          },
+          "actual": {
+            "type": "string"
+          }
+        }
+      },
+      "ComplementarityRequest": {
+        "type": "object",
+        "required": [
+          "options",
+          "models"
+        ],
+        "properties": {
+          "options": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 256,
+            "uniqueItems": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "models": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/NamedModelChoices"
+            }
+          },
+          "groundTruth": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ObservedTruth"
+            },
+            "description": "Optional; exact observation IDs and order are required."
+          }
+        }
+      },
+      "PairComplementarity": {
+        "type": "object",
+        "properties": {
+          "modelA": {
+            "type": "string"
+          },
+          "modelB": {
+            "type": "string"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "agreementCount": {
+            "type": "integer"
+          },
+          "disagreementCount": {
+            "type": "integer"
+          },
+          "disagreementRate": {
+            "type": "number"
+          },
+          "bothCorrect": {
+            "type": "integer",
+            "nullable": true
+          },
+          "bothWrong": {
+            "type": "integer",
+            "nullable": true
+          },
+          "onlyACorrect": {
+            "type": "integer",
+            "nullable": true
+          },
+          "onlyBCorrect": {
+            "type": "integer",
+            "nullable": true
+          },
+          "modelAAccuracy": {
+            "type": "number",
+            "nullable": true
+          },
+          "modelBAccuracy": {
+            "type": "number",
+            "nullable": true
+          },
+          "jointCorrectCoverage": {
+            "type": "number",
+            "nullable": true
+          },
+          "errorPhiCorrelation": {
+            "type": "number",
+            "nullable": true
+          },
+          "oracleUpperBound": {
+            "type": "number",
+            "nullable": true
+          },
+          "oracleGainOverBestSingle": {
+            "type": "number",
+            "nullable": true
+          }
+        }
+      },
+      "ComplementarityReport": {
+        "type": "object",
+        "properties": {
+          "sampleCount": {
+            "type": "integer"
+          },
+          "modelCount": {
+            "type": "integer"
+          },
+          "hasGroundTruth": {
+            "type": "boolean"
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "modelId": {
+                  "type": "string"
+                },
+                "accuracy": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "predictionCounts": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          },
+          "pairs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PairComplementarity"
+            }
+          },
+          "interpretation": {
+            "type": "string"
+          },
+          "atLeastOneCorrectCoverage": {
+            "type": "number",
+            "nullable": true
+          },
+          "oracleUpperBound": {
+            "type": "number",
+            "nullable": true
+          },
+          "oracleGainOverBestSingle": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "description": "Oracle is a hindsight ceiling, not a deployable model fusion result. Accuracy/oracle null without truth."
       }
     }
   }

@@ -1,6 +1,6 @@
 # Statistical Methods / 统计方法
 
-**Status:** Iteration 003 implementation: supervised classification metrics, ECE, Monte Carlo sampled-accuracy null and selected inference are executable; other analyses below remain future work.
+**Status:** Iterations 001-004: statistical metrics, Monte Carlo, guarded inference and aligned model complementarity executable; fusion remains future work.
 
 ## Baselines
 
@@ -52,3 +52,17 @@ Use chronological walk-forward splits, purge overlapping forecast horizons, emba
   of IID Bernoulli sampling and a known common null success probability.
 - Implementation is a pure .NET 10 Core library; the API has explicit bounded
   CPU/data request limits and does not handle production-size async jobs yet.
+
+## Implemented in Iteration 004
+
+The same exact observation IDs and ordering are required across all models
+and optional out-of-sample ground truth. Pairwise contingency counts are
+both-correct, A-only, B-only and both-wrong. Error-Phi measures correlation of
+two binary error indicators, and is null when either indicator has zero
+variance. Prediction disagreement and complementary correctness are NOT
+interchangeable.
+
+For 2+ models, Oracle counts cases with at least one right model. This is a
+HINDSIGHT upper ceiling, not a deployable rule. The gain over best individual
+accuracy is only a theoretical gap. Unlabeled analysis includes just
+prediction counts/disagreements, with all skill/error/oracle fields null.

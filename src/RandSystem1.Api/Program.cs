@@ -53,6 +53,13 @@ app.MapPost("/api/evaluation/paired", (PairedComparisonRequest request) =>
     { return Results.ValidationProblem(new Dictionary<string, string[]> { ["comparison"] = [error.Message] }); }
 }).WithName("EvaluatePairedDifference");
 
+app.MapPost("/api/evaluation/complementarity", (ComplementarityRequest request, CancellationToken ct) =>
+{
+    try { return Results.Ok(ModelComplementarity.Evaluate(request, ct)); }
+    catch (ArgumentException error)
+    { return Results.ValidationProblem(new Dictionary<string, string[]> { ["complementarity"] = [error.Message] }); }
+}).WithName("EvaluateModelComplementarity");
+
 app.MapPost("/api/evaluation/binomial", (ExactBinomialRequest request) =>
 {
     try { return Results.Ok(StatisticalInference.ExactBinomialUpperTail(request)); }

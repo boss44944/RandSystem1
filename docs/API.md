@@ -1,6 +1,6 @@
 # API / 接口
 
-Endpoints implemented through Iteration 003:
+Endpoints implemented through Iteration 004:
 
 | Method | Path | Behavior |
 |---|---|---|
@@ -12,10 +12,11 @@ Endpoints implemented through Iteration 003:
 | POST | /api/evaluation/monte-carlo | Generate fixed-seed random accuracy null distribution and conditional upper-tail estimate |
 | POST | /api/evaluation/paired | Paired model-versus-baseline loss comparison, bootstrap and guarded significance |
 | POST | /api/evaluation/binomial | Exact binomial upper-tail under explicitly confirmed IID Bernoulli assumptions |
+| POST | /api/evaluation/complementarity | Strictly aligned joint errors, prediction disagreement, error Phi and Oracle upper bound |
 
 Invalid request returns HTTP 400; an unknown model returns 404. A faulty model output is rejected with HTTP 502. An OpenAPI JSON endpoint is exposed at /openapi/v1.json in development mode.
 
-The following routes are **planned, not implemented**: /api/evaluation/complementarity, /api/fusion/predict, /api/backtest/run, /api/backtest/{id}. Long-running jobs, database persistence and CLI are later iterations.
+The following routes are **planned, not implemented**: /api/fusion/predict, /api/backtest/run, /api/backtest/{id}. Long-running jobs, database persistence and CLI are later iterations.
 
 ## Iteration 002: random baseline simulation
 
@@ -145,3 +146,37 @@ best-of-many models or unlabeled predictions.
 chronological splits, prove calibration, trade stocks or produce real
 Jev/Laya predictions. Use controlled held-out evaluation and independently
 verifiable data provenance.
+
+## Iteration 004: POST /api/evaluation/complementarity
+
+Pass 2-20 named models with predictions on exactly the SAME held-out samples.
+Every model and optional groundTruth must have identical observationId/order
+and valid candidate labels. At most 20000 observations, 256 choices and
+4 million pairwise observation comparisons; invalid/misaligned requests
+return HTTP 400.
+
+Labeled example:
+
+    {
+      "options": ["UP", "DOWN"],
+      "models": [
+        {"modelId":"A","predictions":[{"observationId":"1","predictedOption":"UP"},{"observationId":"2","predictedOption":"DOWN"}]},
+        {"modelId":"B","predictions":[{"observationId":"1","predictedOption":"DOWN"},{"observationId":"2","predictedOption":"DOWN"}]}
+      ],
+      "groundTruth":[{"observationId":"1","actual":"UP"},{"observationId":"2","actual":"DOWN"}]
+    }
+
+Labeled report: per-model accuracy / prediction class counts; each unordered
+pair's bothCorrect, bothWrong, onlyACorrect, onlyBCorrect, agreement/
+disagreement counts and rate, jointCorrectCoverage / oracleUpperBound,
+errorPhiCorrelation and hindsight gain over the best single model. Error Phi
+is null for zero-variance error indicators (always-right/always-wrong).
+The global oracleUpperBound includes all model choices.
+
+Oracle selects the correct model's answer AFTER observing the ground truth.
+It is a theoretical hindsight ceiling, NOT deployable fusion accuracy. It is
+invalid to tune fusion weights using these held-out labels.
+
+Unlabeled mode (omit groundTruth): returns only per-model prediction counts,
+model-pair agreement and disagreement; every accuracy/error/oracle field is
+null. Disagreement is NOT evidence of superiority to random guessing.

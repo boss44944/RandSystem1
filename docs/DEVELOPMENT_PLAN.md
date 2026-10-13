@@ -6,8 +6,8 @@ Source of product requirements: [complete original RandSystem1 taskbook](PROJECT
 |---|---|---|
 | 001 | Solution, contract, mock, API, tests and docs | Accepted in Agent Hub; Done / merged to main (4f6e5fb) |
 | 002 | Uniform/Dirichlet, majority/prior, independent ensemble and reproducible seeds | Accepted in Hub; Done, Worktree merged to main (e0873ec) |
-| 003 | Metrics, skill, Monte Carlo and valid statistical inference | Implementation and local HTTP verified (63/63 tests); remote CI and Hub independent verification pending |
-| 004 | Model error overlap, disagreement and oracle upper bound | Planned |
+| 003 | Metrics, skill, Monte Carlo and valid statistical inference | Verified, reviewed, Done and merged to main (224cefe) |
+| 004 | Model error overlap, disagreement and oracle upper bound | Locally implemented and HTTP verified (77/77 unit tests); remote CI / Hub independent review pending |
 | 005 | Fusion strategies, risk policy, abstention | Planned |
 | 006 | Walk-forward backtest, trading cost and risk metrics | Planned |
 | 007 | Simulated stock investment comparison (never live trading) | Planned |
