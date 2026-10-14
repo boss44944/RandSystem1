@@ -1,6 +1,6 @@
 # Statistical Methods / 统计方法
 
-**Status:** Iterations 001-006: statistical evaluation, complementarity, frozen-weight fusion, fail-closed decision gates and later holdout comparisons executable.
+**Status:** Iterations 001-007: statistical evaluation, complementarity, frozen-weight fusion, fail-closed decision gates and later holdout comparisons executable.
 
 ## Baselines
 
@@ -81,3 +81,20 @@ two-sided transaction fees and slippage; compounded capital, zero positions
 and bankruptcy are handled explicitly. Return/drawdown calculations are
 simulated. Annualizing with 252 observations presumes daily uniform spacing
 and is descriptive, not proof of predictive or economic superiority.
+
+
+## Iteration 007 - fixed artificial five-session strategy comparison
+
+The artificial demonstration is one predetermined symbol and 32 fixed five-
+session horizons. Each mock forecast is generated only from the previous
+available close, not the execution or future outcome price. Holdout samples,
+costs, data version and seed are explicit, and no strategy weights are
+tuned on test labels. Single vs seeded random have matched full exposure
+and cadence; fusion can abstain, buy-hold has lower turnover with only one
+entry/exit. Different exposures and cost schedules must not be mistaken
+for apples-to-apples expected-return skill. Accuracy uses only decisions;
+NoTrade accuracy is null. Wilson IID bounds are descriptive and NOT
+nominally calibrated for correlated time series. Return/Sharpe
+annualization uses 252/5 five-session observations per year, still
+assumes regular spacing. The generator is not actual market history,
+so no real-money or survivorship-free performance claims apply.

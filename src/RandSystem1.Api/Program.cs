@@ -68,6 +68,15 @@ app.MapPost("/api/evaluation/binomial", (ExactBinomialRequest request) =>
     { return Results.ValidationProblem(new Dictionary<string, string[]> { ["binomial"] = [error.Message] }); }
 }).WithName("EvaluateBinomialUpperTail");
 
+app.MapGet("/api/examples/stock/compare", (int? seed, double? feeRate, double? slippageRate, CancellationToken ct) =>
+{
+    try { return Results.Ok(SimulatedStockExample.Run(
+        new StockExampleRequest(seed ?? 42, FeeRate: feeRate ?? 0.001,
+            SlippageRate: slippageRate ?? 0.001), ct)); }
+    catch (ArgumentException error)
+    { return Results.ValidationProblem(new Dictionary<string, string[]> { ["stockExample"] = [error.Message] }); }
+}).WithName("CompareSimulatedStockStrategies");
+
 app.MapPost("/api/backtest/run", (BacktestRequest request, CancellationToken ct) =>
 {
     try { return Results.Ok(WalkForwardBacktester.Run(request, ct)); }

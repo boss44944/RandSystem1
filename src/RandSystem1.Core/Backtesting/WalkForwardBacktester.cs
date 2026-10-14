@@ -15,7 +15,7 @@ public sealed record BacktestBar(
 /// <summary>Externally frozen prediction; available at or before SignalAt, not fitted on this test label.</summary>
 public sealed record BacktestSignal(string StrategyId, double Position, DateTimeOffset DecidedAt, DateTimeOffset FittedUntil);
 
-/// <summary>Random is seeded simulation; ABSTAIN is always zero, others require an explicit signal.</summary>
+/// <summary>Random is seeded; ABSTAIN is zero; buy-hold holds continuously; other strategies need frozen signals.</summary>
 public sealed record BacktestStrategy(string StrategyId, string Kind, int Seed = 42);
 
 public sealed record WalkForwardConfiguration(
@@ -70,7 +70,7 @@ public sealed record BacktestReport(
 
 public static class WalkForwardBacktester
 {
-    public const string Version = "0.6.0";
+    public const string Version = "0.7.0";
     public static BacktestReport Run(BacktestRequest request, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -159,6 +159,14 @@ public static class WalkForwardBacktester
                 throw new ArgumentException("Overlapping test holding intervals are not supported.");
         }
 
+        if (strategies.Any(s => s.Kind.Equals("buy-hold", StringComparison.OrdinalIgnoreCase)) &&
+            costs.MaxAbsolutePosition != 1.0)
+            throw new ArgumentException("Buy-hold assumes full capital investment; its max absolute position must be 1.");
+        if (strategies.Any(s => s.Kind.Equals("buy-hold", StringComparison.OrdinalIgnoreCase)) &&
+            testIndexes.Zip(testIndexes.Skip(1)).Any(pair =>
+                bars[pair.First.BarIndex].LabelEndAt != bars[pair.Second.BarIndex].SignalAt))
+            throw new ArgumentException("Continuous buy-hold requires contiguous test holding intervals without gaps.");
+
         var results = new List<BacktestStrategyReport>();
         foreach (var strategy in strategies)
         {
@@ -166,6 +174,7 @@ public static class WalkForwardBacktester
             var rng = new StableRandom(unchecked((ulong)(uint)strategy.Seed));
             double equity = costs.InitialCapital, peak = equity, maxDrawdown = 0, turnover = 0, costPaid = 0;
             int trades = 0, wins = 0;
+            bool continuousHold = strategy.Kind.Equals("buy-hold", StringComparison.OrdinalIgnoreCase);
             var curve = new List<BacktestPoint>();
             var returns = new List<double>();
             foreach (var (index, window) in testIndexes)
@@ -175,6 +184,8 @@ public static class WalkForwardBacktester
                 double position;
                 if (strategy.Kind.Equals("abstain", StringComparison.OrdinalIgnoreCase))
                     position = 0;
+                else if (continuousHold)
+                    position = costs.MaxAbsolutePosition;
                 else if (strategy.Kind.Equals("random", StringComparison.OrdinalIgnoreCase))
                     position = rng.NextDouble() < 0.5 ? -costs.MaxAbsolutePosition : costs.MaxAbsolutePosition;
                 else
@@ -193,7 +204,13 @@ public static class WalkForwardBacktester
                 if (!double.IsFinite(change)) throw new ArgumentException("Price ratio overflow.");
                 // Round trip on every tested interval: opening + closing fees/slippage;
                 // no assumption of continuous holding or free liquidation.
-                double barTurnover = 2 * Math.Abs(position);
+                // Buy-and-hold enters once on the first test bar and exits once
+                // on the last contiguous test bar; unlike daily round-trip strategies.
+                int testOrdinal = curve.Count;
+                double barTurnover = continuousHold
+                    ? (testOrdinal == 0 ? Math.Abs(position) : 0)
+                      + (testOrdinal == testIndexes.Count - 1 ? Math.Abs(position) : 0)
+                    : 2 * Math.Abs(position);
                 double cost = barTurnover * (costs.FeeRate + costs.SlippageRate);
                 double gross = position * change;
                 double net = gross - cost;
@@ -202,7 +219,7 @@ public static class WalkForwardBacktester
                 double multiplier = Math.Max(0, 1 + net);
                 equity *= multiplier;
                 if (!double.IsFinite(equity)) throw new ArgumentException("Capital overflow.");
-                if (position != 0 && startingEquity > 0)
+                if (!continuousHold && position != 0 && startingEquity > 0)
                 {
                     trades++;
                     if (net > 0) wins++;
@@ -215,6 +232,11 @@ public static class WalkForwardBacktester
                 returns.Add(realizedReturn);
                 curve.Add(new(bar.ObservationId, window, position, gross, cost,
                     realizedReturn, equity, barTurnover, position == 0));
+            }
+            if (continuousHold)
+            {
+                trades = 1;
+                wins = equity > costs.InitialCapital ? 1 : 0;
             }
             int n = returns.Count;
             double average = returns.Average();
@@ -229,7 +251,7 @@ public static class WalkForwardBacktester
                 trades == 0 ? 0 : (double)wins / trades, turnover, costPaid, curve));
         }
         return new(Version, request.DatasetVersion, request.IsSimulation, config, costs, windows, results,
-            "Simulation only: all strategies share test bars, capital and costs. Each interval opens and closes its own position; fees and slippage are charged at entry and exit. " +
+            "Simulation only: all strategies share test bars, capital and costs. Other than buy-hold, each interval opens and closes its position; buy-hold remains invested across contiguous test bars and pays entry/exit costs only at the two outer boundaries. " +
             "Training/validation indices exclude labels unavailable at the next boundary and respect embargo bars. " +
             "Model/rule/fusion signals MUST be externally frozen as of the decision time; input provenance and actual historical model fitting cannot be independently authenticated. " +
             "Random is deterministic seeded simulation, not a real model; ABSTAIN carries zero exposure. " +
@@ -242,5 +264,6 @@ public static class WalkForwardBacktester
          kind.Equals("rule", StringComparison.OrdinalIgnoreCase) ||
          kind.Equals("fusion", StringComparison.OrdinalIgnoreCase) ||
          kind.Equals("random", StringComparison.OrdinalIgnoreCase) ||
-         kind.Equals("abstain", StringComparison.OrdinalIgnoreCase));
+         kind.Equals("abstain", StringComparison.OrdinalIgnoreCase) ||
+         kind.Equals("buy-hold", StringComparison.OrdinalIgnoreCase));
 }

@@ -39,7 +39,7 @@ public sealed class WalkForwardBacktesterTests
     public void FixedSplitSeparatesTrainValidationEmbargoAndTest()
     {
         var report = WalkForwardBacktester.Run(Fixture());
-        Assert.Equal("0.6.0", report.EngineVersion);
+        Assert.Equal("0.7.0", report.EngineVersion);
         var win = Assert.Single(report.Windows);
         Assert.Equal(["case-0", "case-1", "case-2"], win.TrainIds);
         Assert.Equal(["case-4", "case-5"], win.ValidationIds);
@@ -263,6 +263,43 @@ public sealed class WalkForwardBacktesterTests
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
         Assert.Throws<OperationCanceledException>(() => WalkForwardBacktester.Run(Fixture(), cancellation.Token));
+    }
+
+    [Fact]
+    public void ContinuousBuyHoldChargesEntryAndExitOnlyAndCountsOneTrade()
+    {
+        var fixture = Fixture();
+        var output = WalkForwardBacktester.Run(fixture with
+        {
+            Strategies = [new("long", "buy-hold")],
+            Bars = fixture.Bars.Select(x => x with
+            {
+                ExitPrice = 101,
+                LabelEndAt = x.SignalAt.AddDays(1)
+            }).ToArray()
+        });
+        var hold = Assert.Single(output.Strategies);
+        Assert.Equal(1, hold.ExecutedTrades);
+        Assert.Equal(2, hold.TotalTurnover);
+        Assert.Equal(.02, hold.Curve[0].CostFraction, 12);
+        Assert.Equal(.02, hold.Curve[^1].CostFraction, 12);
+        Assert.All(hold.Curve.Skip(1).SkipLast(1), x => Assert.Equal(0, x.CostFraction));
+    }
+
+    [Fact]
+    public void ContinuousBuyHoldRejectsGapsBetweenTestPositions()
+    {
+        var req = Fixture();
+        Assert.Throws<ArgumentException>(() => WalkForwardBacktester.Run(req with
+        { Strategies = [new("long", "buy-hold")] }));
+    }
+
+    [Fact]
+    public void BuyHoldRequiresFullInvestedExposureWithoutImplicitRebalance()
+    {
+        var input = Fixture(costs: new BacktestCostPolicy(MaxAbsolutePosition: .5));
+        Assert.Throws<ArgumentException>(() => WalkForwardBacktester.Run(input with
+        { Strategies = [new("hold", "buy-hold")] }));
     }
 
     [Fact]

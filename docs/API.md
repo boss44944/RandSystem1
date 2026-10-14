@@ -1,6 +1,6 @@
 # API / 接口
 
-Endpoints implemented through Iteration 006:
+Endpoints implemented through Iteration 007:
 
 | Method | Path | Behavior |
 |---|---|---|
@@ -16,6 +16,7 @@ Endpoints implemented through Iteration 006:
 | POST | /api/fusion/predict | Equal/static/performance/dynamic fusion with ABSTAIN and business gates |
 | POST | /api/fusion/holdout | Descriptive evaluation of frozen fusion weights on later labeled cases vs single models/uniform baseline |
 | POST | /api/backtest/run | Time-ordered paper backtest, purged/embargoed split, fixed costs, strategy/risk comparison |
+| GET | /api/examples/stock/compare?seed=42 | Seed-replayable synthetic 5-session UP/DOWN investment comparison |
 
 Invalid request returns HTTP 400; an unknown model returns 404. A faulty model output is rejected with HTTP 502. An OpenAPI JSON endpoint is exposed at /openapi/v1.json in development mode.
 
@@ -317,3 +318,50 @@ real-world trading constraints before interpretation. Simulated random trades
 may have different frequency/exposure from nonrandom strategies, so equal
 fees alone do not establish fair risk-adjusted skill or causal improvement.
 No actual trades occur and no historic profit guarantees future returns.
+
+
+## Iteration 007 - Synthetic stock comparison
+
+GET /api/examples/stock/compare?seed=42 (optional feeRate and slippageRate
+default to 0.001 for EACH SIDE). Exactly 32 non-overlapping five-weekday
+forecast periods, 161 deterministic artificial closing prices, one fixed
+symbol SYNTHETIC-ONE, no actual equity prices, no Jev/Laya calls, and
+no financial brokerage/execution. All dates are artificial weekdays; holidays
+are not modeled.
+
+Task: five subsequent trading sessions UP (>0) or DOWN (<=0). Every mock
+model gets only prior-session price history, not current entry/exit prices.
+Versions: mock-momentum5-v1, mock-momentum15-v1 and mock-unanimous-v1
+(fusion requires agreement or abstains). Additional seeded random, actual
+continuous buy-hold, and no-trade complete six strategies. Rules are
+untrained mock heuristics, not empirically validated AI.
+
+All modes share predeclared expanding chronological train/validation/test
+windows: 8 initial training observations, 3 validation, 3 test, 3 step,
+1 embargo per boundary. Each uses the identical 18 held-out observation
+IDs, friction and initial capital (10000); exposure cap is 1. Single
+and random both take one full-magnitude position each eligible period.
+Fusion has reduced coverage when models disagree. Buy-hold stays long
+continuously through contiguous test cases with ONLY one entry and exit,
+while other strategies close every five-session period and pay round trip.
+The latter exposure/frequency distinctions are reported, NOT mistaken
+for equal risk budget or an advantage.
+
+Response is marked isSimulation=true and includes every generated
+observation, labels, predicted directions, model versions, fixed seed,
+datasetVersion, SHA256 over artificial doubles, all split IDs and
+all strategy equity curves. Statistics: accuracy/coverage, descriptive
+Wilson binomial 95% intervals (null if no predictions), final capital,
+returns, annualization scaled for five-session periods (252/5),
+drawdown, turnover, transaction costs and trade count.
+
+Wilson IID accuracy bounds are NOT reliable 95% uncertainty intervals
+for serially correlated observations. This is a software example, not
+evidence that any AI beats chance, fusion helps, or market returns are
+repeatable. Seed-searching to pick a profitable synthetic past is
+selection bias. Synthetic fixed symbol is not a survivorship-bias-free
+real market universe. Execution uses simple fixed fees/slippage and
+excludes market microstructure. No live trading.
+
+The full HTTP-generated fixture is checked in as:
+examples/stock-demo-007-seed42.json.

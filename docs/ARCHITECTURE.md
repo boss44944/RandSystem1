@@ -42,3 +42,14 @@ and actual trading adapters. API maps POST /api/backtest/run. Strict time
 boundaries, purge and embargo isolate training/validation/test; risk and cost
 calculation use identical test bars and policy across strategies. External
 signals are assumed historically frozen and their provenance requires audit.
+
+
+## Iteration 007 - synthetic stock example
+
+RandSystem1.Core.Backtesting.SimulatedStockExample composes the pure
+WalkForwardBacktester over deterministic mock five-session bars and
+price-only-as-of signals. The general 006 backtester gains a compatible
+buy-hold strategy with continuous holding and only opening/closing costs
+for contiguous full-exposure intervals. The GET /api/examples/stock/compare
+HTTP wrapper supplies optional seed and cost rates. All computation runs
+on CPU without data stores, brokers, network API keys or model adapters.
