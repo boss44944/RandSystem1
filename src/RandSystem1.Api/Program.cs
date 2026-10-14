@@ -1,6 +1,7 @@
 using RandSystem1.Abstractions.Interfaces;
 using RandSystem1.Abstractions.Models;
 using RandSystem1.Core.Validation;
+using RandSystem1.Core.Backtesting;
 using RandSystem1.Core.Random;
 using RandSystem1.Core.Statistics;
 using RandSystem1.Infrastructure.ModelAdapters;
@@ -66,6 +67,13 @@ app.MapPost("/api/evaluation/binomial", (ExactBinomialRequest request) =>
     catch (ArgumentException error)
     { return Results.ValidationProblem(new Dictionary<string, string[]> { ["binomial"] = [error.Message] }); }
 }).WithName("EvaluateBinomialUpperTail");
+
+app.MapPost("/api/backtest/run", (BacktestRequest request, CancellationToken ct) =>
+{
+    try { return Results.Ok(WalkForwardBacktester.Run(request, ct)); }
+    catch (ArgumentException error)
+    { return Results.ValidationProblem(new Dictionary<string, string[]> { ["backtest"] = [error.Message] }); }
+}).WithName("RunWalkForwardBacktest");
 
 app.MapPost("/api/fusion/holdout", (FusionHoldoutRequest request) =>
 {

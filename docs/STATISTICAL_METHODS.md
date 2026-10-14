@@ -1,6 +1,6 @@
 # Statistical Methods / 统计方法
 
-**Status:** Iterations 001-005: statistical evaluation, complementarity, frozen-weight fusion, fail-closed decision gates and later holdout comparisons executable.
+**Status:** Iterations 001-006: statistical evaluation, complementarity, frozen-weight fusion, fail-closed decision gates and later holdout comparisons executable.
 
 ## Baselines
 
@@ -66,3 +66,18 @@ For 2+ models, Oracle counts cases with at least one right model. This is a
 HINDSIGHT upper ceiling, not a deployable rule. The gain over best individual
 accuracy is only a theoretical gap. Unlabeled analysis includes just
 prediction counts/disagreements, with all skill/error/oracle fields null.
+
+
+## Implemented in Iteration 006
+
+Time-ordered walk-forward test windows cannot overlap. Training examples with
+labels ending after validation begins, or validation examples with labels
+ending after the test begins, are purged; bar-count embargo gaps are reported.
+Fitted signals have declared as-of decision and fitting times validated
+against historical signalAt, but the engine cannot authenticate the
+caller-supplied fit data or original prediction provenance.
+Each strategy's round-trip position is opened and closed per bar, with
+two-sided transaction fees and slippage; compounded capital, zero positions
+and bankruptcy are handled explicitly. Return/drawdown calculations are
+simulated. Annualizing with 252 observations presumes daily uniform spacing
+and is descriptive, not proof of predictive or economic superiority.

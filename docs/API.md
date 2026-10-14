@@ -1,6 +1,6 @@
 # API / 接口
 
-Endpoints implemented through Iteration 005:
+Endpoints implemented through Iteration 006:
 
 | Method | Path | Behavior |
 |---|---|---|
@@ -15,10 +15,11 @@ Endpoints implemented through Iteration 005:
 | POST | /api/evaluation/complementarity | Strictly aligned joint errors, prediction disagreement, error Phi and Oracle upper bound |
 | POST | /api/fusion/predict | Equal/static/performance/dynamic fusion with ABSTAIN and business gates |
 | POST | /api/fusion/holdout | Descriptive evaluation of frozen fusion weights on later labeled cases vs single models/uniform baseline |
+| POST | /api/backtest/run | Time-ordered paper backtest, purged/embargoed split, fixed costs, strategy/risk comparison |
 
 Invalid request returns HTTP 400; an unknown model returns 404. A faulty model output is rejected with HTTP 502. An OpenAPI JSON endpoint is exposed at /openapi/v1.json in development mode.
 
-The following routes are **planned, not implemented**: /api/backtest/run, /api/backtest/{id}. Long-running jobs, database persistence and CLI are later iterations.
+The following routes are **planned, not implemented**: /api/backtest/{id}. Long-running jobs, database persistence and CLI are later iterations.
 
 ## Iteration 002: random baseline simulation
 
@@ -265,3 +266,54 @@ Validation on the same sample as weight fitting, even if called
 `validation`, overestimates strategy advantage. Pin data source, strategy,
 model version, validation time cutoffs, calibration protocol, experiment seed
 and holdout split independently when using these endpoints.
+
+
+## Iteration 006: POST /api/backtest/run
+
+Pass a versioned historical dataset: datasetVersion, isSimulation=true,
+strictly time-ordered bars with unique observationId, signalAt, labelEndAt
+(outcome availability, strictly after signalAt), positive entryPrice/exitPrice
+and optional strategy signals. All strategies use the same test windows.
+API can validate caller-reported timing, not independently verify provenance.
+
+Window fields: minimumTrainBars, validationBars, testBars, stepBars (at least
+testBars), embargoBars (observation-count gaps), expandingTrain. Expanding
+and rolling windows move chronologically. Training labels unavailable before
+validation are purged; validation labels unavailable before test are purged.
+Empty eligible partitions, duplicate IDs and overlapping test holding
+intervals fail with HTTP 400. No implicit missing-value imputation.
+
+Strategies: {strategyId,kind,seed}; kind is single, fusion, rule, random or
+abstain. For the first three each held-out test bar MUST contain exactly one
+corresponding externally supplied signal:
+{strategyId,position,decidedAt,fittedUntil}. Require
+fittedUntil <= decidedAt <= signalAt; position is finite with absolute
+exposure <= configured maxAbsolutePosition. A random strategy uses seeded
+SplitMix64 to generate +/- exposure; ABSTAIN has zero position and no trades.
+There is no internal model fitting and no real order execution.
+
+Each held-out bar represents one closed round-trip simulated position,
+regardless of the previous bar. Gross return is
+position * (exitPrice / entryPrice - 1). Both entry AND closing fees plus
+slippage are charged: 2*abs(position)*(feeRate+slippageRate). Cash compounds
+by max(0,1+netReturn); bankrupt portfolios stay at zero. The API returns
+per-strategy equity curves, turnover, fees/slippage cost, win rate, trade
+count, max drawdown, cumulative return, descriptive 252-bar annualized
+return/Sharpe (null if not estimable). Trade counts represent round trips.
+
+Minimal deterministic example: request using 10 historical daily bars
+with contiguous dates and valid entry/exit prices, window settings
+{minimumTrainBars:3,validationBars:2,testBars:2,stepBars:2,embargoBars:1},
+costs {initialCapital:1000,feeRate:0.01,slippageRate:0.01},
+and strategies [{strategyId:"r",kind:"random",seed:42},
+{strategyId:"flat",kind:"abstain"}] tests bars at indexes 7 and 8.
+Every bar must have signalAt, labelEndAt, entryPrice, exitPrice and
+observationId, even if no model signals are used.
+
+Limits: 5..20000 bars, 1..12 strategies, no overlapping test windows.
+Calendar-irregular or highly dependent observations make the 252-bar
+annualization invalid; price data should account for corporate actions and
+real-world trading constraints before interpretation. Simulated random trades
+may have different frequency/exposure from nonrandom strategies, so equal
+fees alone do not establish fair risk-adjusted skill or causal improvement.
+No actual trades occur and no historic profit guarantees future returns.
