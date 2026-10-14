@@ -51,19 +51,15 @@ correlation invalidates naive binomial Wilson confidence coverage.
 Seed search or optimizing on reported holdout introduces selection
 bias. Different exposure/turnover makes direct rankings confounded.
 
-## Acceptance state
-Actual local verification observed on 2026-10-14 in Hub-isolated worktree:
-- dotnet restore RandSystem1.slnx successful.
-- Release build --warnaserror: 0 errors and 0 warnings.
-- Full xUnit suite: 135/135 green, 0 skipped (original 117 + 18 new tests).
-- Real ASP.NET HTTP: 13/13 cases, including default seed, identical replay,
-  different datasets on changed seed, costs, invalid seed/negative/NaN fee,
-  no-trade, accurate continuous buy-hold, OpenAPI 0.7.0 (13 paths).
-- Seed42 has 18 heldout decisions. Sample final capital on fully SYNTHETIC
-  data: single 8261.67; second 8433.21; fusion 8569.93; random 8881.15;
-  buy-hold 11819.58; no-trade 10000. This is intentionally not interpreted
-  as investment outperformance. Exact full generated JSON is committed.
-- GitHub CI, actual commit, artifacts and Hub review are separate later gates.
-
-Never mark Done or merge before independent Verification, Review and human
-final confirmation.
+## Verification record (2026-10-14)
+- Dependency restore and Release build with warning-as-error: 0 warnings/0 errors.
+- Full xUnit suite: 135/135 tests passed, 0 skipped (18 new tests).
+- Actual ASP.NET HTTP smoke: 13/13 cases, including fixed seed replay,
+  alternate seed, cost assumptions, invalid fee/seed values, valid
+  Buy & Hold accounting and OpenAPI 0.7.0.
+- Fixed-seed synthetic 18-test-case capital results: single 8261.67,
+  second 8433.21, fusion 8569.93, random 8881.15,
+  buy-hold 11819.58 and no-trade 10000 (all start at 10000).
+  These are NOT real portfolio performance or evidence of predictive skill.
+- Full synthetic JSON fixture is available in
+  examples/stock-demo-007-seed42.json.

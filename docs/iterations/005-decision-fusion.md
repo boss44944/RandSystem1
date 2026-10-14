@@ -45,18 +45,17 @@ out-of-sample validation are essential. The holdout's best-single is not an
 oracle fusion strategy. Temporal purge, embargo, robust uncertainty and
 true model adapters are later iterations.
 
-## Acceptance results
-Local final Release build passed with 0 warnings/errors after restore;
-98/98 automated tests passed, including 21 new fusion and holdout tests.
-Real ASP.NET HTTP smoke passed 13/13 scenarios: equal/static/dynamic
-EXECUTE with supplied evidence, default ABSTAIN for no evidence,
-timeouts, malformed success, future proof, and low risk confidence;
-HTTP 400 for invalid configuration/holdout chronology; and a fixed
-4-case holdout where fusion accuracy 50% trails best single 100%.
-OpenAPI 0.5.0 route returned HTTP 200 and 11 documented paths.
-Remote CI, Git evidence and independent Agent Hub verification/review
-are separate gates pending submission.
+## Verification record
+The Release build completed with 0 warnings and 0 errors;
+98/98 automated tests passed, including 21 fusion and holdout tests.
+Live ASP.NET API smoke checks passed 13/13 scenarios, covering
+equal/static/dynamic weights, low confidence ABSTAIN, missing/timeout
+model outputs, invalid probabilities, future evidence rejection, risk
+gates and HTTP 400 validation. A fixed holdout fixture reported
+fusion accuracy 50% versus best single 100%, demonstrating that
+fusion improvements must not be assumed.
 
-## Next stage
-After successful HTTP and CI verification, record real evidence and submit
-the Run through Agent Hub. Do not merge/mark Done before human confirmation.
+## Limitations
+Validation metadata and timestamps are caller supplied; their
+provenance still needs independent auditing. Neither a model's
+confidence nor a hindsight-best comparator proves economic benefit.
