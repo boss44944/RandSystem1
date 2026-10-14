@@ -39,11 +39,6 @@ Sharpe assumptions and execution costs need independent validation.
 Data splits are based on observation bars rather than calendar durations.
 Random strategy exposure/trade count may differ from other policies.
 
-## Gate
-Formal development needs actual build/test, HTTP, Git commit/push, Draft PR,
-verified CI, Hub artifact evidence, task_submit, then independent review and
-human confirmation. Do not merge before approval.
-
 ## Verified local evidence (2026-10-14)
 - dotnet restore RandSystem1.slnx: completed successfully.
 - dotnet build RandSystem1.slnx -c Release --warnaserror: 0 errors and 0 warnings.
@@ -53,4 +48,4 @@ human confirmation. Do not merge before approval.
   bad price, overlapping tests, negative fees, falsely non-simulated output,
   missing dataset version, and a genuine purged historical label.
 - Deterministic accounting: capital 1000, two 6% net intervals, final 1123.60.
-- This local evidence is not GitHub CI and not independent reviewer approval.
+- These are reproducible local engineering checks, not statistical proof of financial performance.

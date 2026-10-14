@@ -1,28 +1,29 @@
-# Iteration 002 — Random baselines
+# Iteration 002 - Random baselines
 
 ## Goal
-Deliver random baselines as a runnable, independently tested increment.
+Deliver reproducible model-independent random and training-fitted baselines.
 
 ## Scope
-Uniform probability and independent sampling; Dirichlet concentration and seed; training-only majority/prior; multi-seed random ensembles.
+- Uniform probabilities vs actual categorical sampling.
+- Dirichlet random probabilities with configurable concentration.
+- Majority and Prior fitted only on caller-provided training labels.
+- Independent seeded random ensemble members using a stable SplitMix64 PRNG.
 
-## Technical approach
-Use .NET 10 modular-monolith architecture; keep algorithm dependencies separate from HTTP and persistence. Pin versions, seeds and dataset splits where relevant; never use future information. Ensure the previous iteration stays green.
-
-## Key code locations
-- Pure C# core and fixed PRNG: src/RandSystem1.Core/Random/BaselineEngine.cs
-- HTTP: src/RandSystem1.Api/Program.cs (POST /api/random/generate)
-- API schema and guide: src/RandSystem1.Api/openapi.json, docs/API.md
+## Implementation
+- src/RandSystem1.Core/Random/BaselineEngine.cs
+- POST /api/random/generate in src/RandSystem1.Api/Program.cs
 - Tests: tests/RandSystem1.UnitTests/RandomBaselineTests.cs
+- OpenAPI and docs/API.md
 
-## Test method
-Exact uniform sums, seed reproducibility, valid Dirichlet probabilities, majority on imbalanced training labels. Run dotnet build and dotnet test, plus endpoint/CLI integration testing when introduced.
+## Verification record
+Release build: 0 warnings/0 errors; 43/43 xUnit tests passed, including
+existing tests. Fixed-seed replay, independent ensemble member seeds,
+Dirichlet numerical cases, probabilities summing to one, training-only
+majority/prior, invalid inputs and cancellation were tested. Real HTTP
+smoke generated 70 draws for each of four baseline types, matched seed
+replays, normalized probabilities, checked simulation metadata and saw
+seven invalid requests return HTTP 400.
 
-## Acceptance results
-Implementation complete in Run Worktree; 43/43 local unit tests passed (including 001 regressions). Covers seed replay, categorical draws, independent member seeds, uniform long-run frequency, Dirichlet numerical boundaries, majority/prior on training-only data, batch validation and cancellation. Final local verification: Release build succeeded with 0 warnings and 0 errors; 43/43 tests passed, 0 skipped. Live HTTP integration test generated 70 draws for each of uniform, dirichlet, majority and prior (280 draws total), verified identical seed replay for each type, independent member seeds, probabilities normalized to 1, simulation metadata, and correct majority/prior. Seven bad inputs returned HTTP 400. Health and OpenAPI routes succeeded and schema declared version 0.2.0. Remote GitHub CI, independent Hub review and human confirmation remain separate gates.
-
-## Known issues
-001 was Verified/Reviewed/Done in Hub and merged into main before this Run. Caller must enforce chronological training/test split; the API cannot infer it from labels. Engine version 0.2.0 pins internal SplitMix64 seed replay. No result should be mistaken for real-world AI accuracy.
-
-## Next stage
-Finish build and API smoke, commit in Run Worktree, verify remote CI, register evidence and submit to Hub. Only after independent verification and human confirmation start 003.
+## Limitations
+The caller is responsible for clean chronological training/evaluation
+splits. Simulated draws are not measurements of real model accuracy.

@@ -18,8 +18,7 @@ Contract tests against documented adapter behavior, no fabricated model API or p
 ## Acceptance results
 NOT STARTED. No build/test claim for this iteration.
 
-## Known issues
-Dependent on successful verification and review of preceding iterations. Technical decisions remain open until implementation.
-
-## Next stage
-Complete acceptance evidence, commit and submit through Agent Hub; then begin the next numbered iteration.
+## Status
+Planned. This specification describes intended functionality, not
+an already implemented or verified capability. New components must
+be independently tested against the existing .NET 10 library and API.
